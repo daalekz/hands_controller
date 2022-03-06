@@ -18,6 +18,7 @@
       src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"
       crossorigin="anonymous"
     ></script>
+    <script src="./index.js" type="module"></script>
   </head>
 
   <body>
@@ -28,13 +29,17 @@
   </body>
 </html>
 <script type="module">
+  import {getHand, handInHotZone, coordsInSameSpace, pointIsWithinRangeOfOtherPoint, debounce} from "./utils.js";
   const videoElement = document.getElementsByClassName("input_video")[0];
   const canvasElement = document.getElementsByClassName("output_canvas")[0];
   const canvasCtx = canvasElement.getContext("2d");
-  const processChange = debounce((results) => function(results) {
+  const processChange = debounce(
+    (results) =>
+      function (results) {
         oldCoords = results.multiHandWorldLandmarks[0][0];
         console.log(oldCoords);
-  });
+      }
+  );
   var oldCoords = []; //queue of x length?
   function onResults(results) {
     canvasCtx.save();
@@ -55,46 +60,23 @@
         drawLandmarks(canvasCtx, landmarks, { color: "#FF0000", lineWidth: 2 });
       }
     }
-    
+
     if (results.multiHandedness && results.multiHandedness.length > 0) {
       console.log(getHand(results.multiHandedness));
       processChange(results);
-      if (coordsInSameSpace(oldCoords, results.multiHandWorldLandmarks[0][0], 1.1)) {
+      if (
+        coordsInSameSpace(
+          oldCoords,
+          results.multiHandWorldLandmarks[0][0],
+          1.1
+        )
+      ) {
         console.log("HANDS IN RANGE LMAO");
-        }
+      }
     }
     canvasCtx.restore();
   }
-  
-  function getHand(handedNess) {
-    var cleaned = handedNess.filter(function (hand) {
-      return hand.label != "undefined";
-    });
-    return cleaned.map(function (hand) {
-      //horizontal transform on the camera feed was adding unecessary latency, this is faster lmao
-      if (hand.label == "Left") return "Right";
-      if (hand.label == "Right") return "Left";
-    });
-  }
-  function coordsInSameSpace(oldCoords, newCoords, range){
-      return pointIsWithinRangeOfOtherPoint(oldCoords.x, newCoords.x, range) &&
-      pointIsWithinRangeOfOtherPoint(oldCoords.y, newCoords.y, range) &&
-      pointIsWithinRangeOfOtherPoint(oldCoords.z, newCoords.z, range);
-  }
-  
-  function pointIsWithinRangeOfOtherPoint(targetPoint, candidatePoint, range) {
-    const tempUpper = targetPoint + (targetPoint / range);
-    const tempLower = targetPoint - (targetPoint / range);
-    return candidatePoint <= tempUpper && candidatePoint >= tempLower;
-  }
 
-  function debounce(func, timeout = 500){
-  let timer;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => { func.apply(this, args); }, timeout);
-  };
-}
   const hands = new Hands({
     locateFile: (file) => {
       return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
